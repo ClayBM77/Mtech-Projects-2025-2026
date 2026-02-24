@@ -17,7 +17,7 @@ struct Post: Identifiable, Equatable, Sendable, Codable {
     let createdAt: Date
     let userLiked: Bool
     
-    init(id: String, author: User, title: String, body: String, likeCount: Int, commentCount: Int, createdAt: Date, userLiked: Bool = false) {
+    nonisolated init(id: String, author: User, title: String, body: String, likeCount: Int, commentCount: Int, createdAt: Date, userLiked: Bool = false) {
         self.id = id
         self.author = author
         self.title = title
