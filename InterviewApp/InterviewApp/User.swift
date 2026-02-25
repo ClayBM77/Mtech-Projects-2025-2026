@@ -6,7 +6,7 @@
 //
 import Foundation
 import SwiftData
-
+//Used Model object oveer strings for future updates. This does require to use another saving system outside of AppStorage
 @Model
 class User {
     var id: String

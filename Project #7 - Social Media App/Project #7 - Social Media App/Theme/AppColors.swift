@@ -10,19 +10,15 @@ import SwiftUI
 extension Color {
     /// App color palette
     struct AppPalette {
-        /// Dark blue-gray: #28536B
+        // Dark blue-gray: #28536B
         static let primaryDark = Color(hex: "28536B")
-        
-        /// Muted rose/terracotta: #C2948A
+        // Muted rose/terracotta: #C2948A
         static let accentRose = Color(hex: "C2948A")
-        
-        /// Light blue: #7EA8BE
+        // Light blue: #7EA8BE
         static let accentBlue = Color(hex: "7EA8BE")
-        
-        /// Off-white/cream: #F6F0ED
+        // Off-white/cream: #F6F0ED
         static let backgroundLight = Color(hex: "F6F0ED")
-        
-        /// Muted beige/taupe: #BBB193
+        // Muted beige/taupe: #BBB193
         static let accentBeige = Color(hex: "BBB193")
     }
 }

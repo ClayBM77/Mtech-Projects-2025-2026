@@ -28,56 +28,76 @@
 
 import SwiftUI
 import SwiftData
+import Observation
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \User.order) private var storedUsers: [User]
 
-    @State private var users: [String] = []
-    @State private var newUser: String = ""
-    @State private var selectedUserIndices: Set<Int> = []
-    @AppStorage("selectionCount") private var selectionCount: Int = 1
-    @AppStorage("selectedUserIndices") private var selectedUserIndicesStorage: String = ""
+    @State private var viewModel = ContentViewModel()
 
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 12) {
+                @Bindable var viewModel = viewModel
+
                 HStack {
-                    TextField("Enter name", text: $newUser)
+                    TextField("Enter name", text: $viewModel.newUser)
                     Button("Add") {
-                        addUser()
+                        viewModel.addUser(modelContext: modelContext, storedUsers: storedUsers)
                     }
-                    .disabled(newUser.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(viewModel.newUser.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
 
                 Stepper(
-                    "Number to select: \(selectionCount)",
-                    value: $selectionCount,
-                    in: 1...(users.isEmpty ? 1 : users.count)
+                    "Number to select: \(viewModel.selectionCount)",
+                    value: $viewModel.selectionCount,
+                    in: 1...(viewModel.users.isEmpty ? 1 : viewModel.users.count)
                 )
                 Button("Select Random Users") {
-                    selectRandomUsers()
+                    viewModel.selectRandomUsers()
                 }
-                .disabled(users.isEmpty)
+                .disabled(viewModel.users.isEmpty)
                 .padding()
                 .glassEffect()
 
-                List {
-                    ForEach(users.indices, id: \.self) { index in
-                        HStack {
-                            Text(users[index])
+                
+                Text("Current Users:")
+                if viewModel.users.isEmpty {
+                    VStack(alignment: .center) {
+                        Text("Please create a user")
+                            .font(.title)
+                            .foregroundColor(.secondary)
+                            .padding()
+                        Image(systemName: "dog.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 80, height: 80)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                } else {
+                    List {
+                        ForEach(viewModel.users.indices, id: \.self) { index in
+                            HStack {
+                                Text(viewModel.users[index])
+                            }
+                        }
+                        .onDelete { offsets in
+                            viewModel.deleteUser(at: offsets, modelContext: modelContext, storedUsers: storedUsers)
+                        }
+                        .onMove { source, destination in
+                            viewModel.moveUsers(from: source, to: destination, modelContext: modelContext, storedUsers: storedUsers)
                         }
                     }
-                    .onDelete(perform: deleteUsers)
-                    .onMove(perform: moveUsers)
                 }
-                if !selectedUserIndices.isEmpty {
+                if !viewModel.selectedUserIndices.isEmpty {
                     Text("Selected Users:")
                 }
                 List {
-                    ForEach(users.indices, id: \.self) { index in
-                        if selectedUserIndices.contains(index) {
-                            Text(users[index])
+                    ForEach(viewModel.users.indices, id: \.self) { index in
+                        if viewModel.selectedUserIndices.contains(index) {
+                            Text(viewModel.users[index])
                         }
                     }
                 }
@@ -90,90 +110,11 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            load()
+            viewModel.load(modelContext: modelContext, storedUsers: storedUsers)
         }
-        .onChange(of: users) { _, newUsers in
-            adjustCount(for: newUsers.count)
+        .onChange(of: viewModel.users) { _, newUsers in
+            viewModel.adjustCount(for: newUsers.count)
         }
-    }
-
-    private func addUser() {
-        let formattedName = newUser.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !formattedName.isEmpty else { return }
-
-        users.append(formattedName)
-        newUser = ""
-        selectedUserIndices.removeAll()
-        save()
-        saveSelectedUserIndices()
-    }
-
-    private func deleteUsers(at offsets: IndexSet) {
-        users.remove(atOffsets: offsets)
-        selectedUserIndices.removeAll()
-        save()
-        saveSelectedUserIndices()
-    }
-
-    private func moveUsers(from source: IndexSet, to destination: Int) {
-        var newOrder = users
-        newOrder.move(fromOffsets: source, toOffset: destination)
-        users = newOrder
-        selectedUserIndices.removeAll()
-        save()
-        //saveSelectedUserIndices()
-    }
-
-    private func selectRandomUsers() {
-        let allUserIndices = Array(users.indices)
-
-        selectedUserIndices = Set(allUserIndices.shuffled().prefix(selectionCount))
-        saveSelectedUserIndices()
-    }
-
-    private func adjustCount(for userCount: Int) {
-        if userCount == 0 {
-            selectionCount = 1
-        } else if selectionCount > userCount {
-            selectionCount = userCount
-        }
-    }
-
-    private func load() {
-        // load users
-        users = storedUsers
-            .sorted(by: { $0.order < $1.order })
-            .map { $0.name }
-
-        //load last random set
-        let indices = selectedUserIndicesStorage
-            .split(separator: ",")
-            .compactMap { Int($0) }
-            .filter { $0 >= 0 && $0 < users.count }
-
-        selectedUserIndices = Set(indices)
-    }
-
-    private func save() {
-        for user in storedUsers {
-            modelContext.delete(user)
-        }
-
-        for (index, name) in users.enumerated() {
-            let user = User(name: name, order: index)
-            modelContext.insert(user)
-        }
-
-        try? modelContext.save()
-    }
-
-    private func saveSelectedUserIndices() {
-        let indicesString = selectedUserIndices
-            .sorted()
-            .map(String.init)
-            .joined(separator: ",")
-
-        selectedUserIndicesStorage = indicesString
     }
 }
 
